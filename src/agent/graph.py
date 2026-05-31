@@ -12,7 +12,6 @@ from agent.models import (
     Action,
     ActionStatus,
     ActionType,
-    Classification,
     Context,
     Input,
     OutcomeReason,
@@ -31,11 +30,6 @@ REFUND_POLICY_WINDOW = timedelta(days=7)
 def _is_partial_refund_request(ticket: Ticket, user: User) -> bool:
     # TODO: Implement partial refund detection when refund amount semantics are defined.
     return False
-
-
-def _execution_mode(runtime: Runtime[Context]) -> str:
-    context = runtime.context or Context()
-    return context.execution_mode
 
 
 def _terminal(
@@ -181,9 +175,6 @@ async def classify(state: State, runtime: Runtime[Context]) -> Command:
             summary=f"Failed to classify ticket {state.ticket.id}.",
         )
 
-    if not isinstance(classification, Classification):
-        classification = Classification.model_validate(classification)
-
     return Command(
         update={
             "intent": classification.intent,
@@ -233,7 +224,7 @@ def decide(state: State, runtime: Runtime[Context]) -> Command:
             summary=f"Routed ticket {state.ticket.id}: partial refund request.",
         )
 
-    if _execution_mode(runtime) == "review":
+    if runtime.context.execution_mode == "review":
         return Command(
             update={
                 "needs_review": True,
@@ -272,9 +263,7 @@ def wait_for_approval(state: State, runtime: Runtime[Context]) -> Command:
         }
     )
 
-    approved = (
-        approval.get("approved") if isinstance(approval, dict) else bool(approval)
-    )
+    approved = approval.get("approved", False)
     if not approved:
         return _terminal_command(
             state,
@@ -304,7 +293,7 @@ async def execute_refund(state: State, runtime: Runtime[Context]) -> Command:
             outcome_reason="admin_api_error",
             summary=f"Failed to issue refund for ticket {state.ticket.id}.",
         )
-    actions = [*actions, _action("refund", external_id=refund_id)]
+    actions = actions + [_action("refund", external_id=refund_id)]
 
     try:
         services.helpdesk.reply_to_ticket(
@@ -315,20 +304,18 @@ async def execute_refund(state: State, runtime: Runtime[Context]) -> Command:
     except Exception:
         return Command(
             update={
-                **_terminal(
-                    state,
-                    intent="refund",
-                    outcome="failed",
-                    outcome_reason="helpscout_api_error",
-                    summary=f"Failed to record HelpScout reply/close for ticket {state.ticket.id}.",
-                ),
+                "intent": "refund",
+                "outcome": "failed",
+                "outcome_reason": "helpscout_api_error",
+                "summary": f"Failed to record HelpScout reply/close for ticket {state.ticket.id}.",
+                "terminal": True,
+                "needs_review": False,
                 "actions": actions,
             },
             goto="finalize",
         )
 
-    actions = [
-        *actions,
+    actions = actions + [
         _action("helpscout_reply"),
         _action("helpscout_close"),
     ]
@@ -359,15 +346,12 @@ async def finalize(state: State, runtime: Runtime[Context]) -> Command:
                     "outcome": "failed",
                     "outcome_reason": "helpscout_api_error",
                     "summary": f"Failed to leave private note for ticket {state.ticket.id}.",
-                    "actions": [
-                        *actions,
-                        _action("private_note", "failed"),
-                    ],
+                    "actions": actions + [_action("private_note", "failed")],
                     "terminal": True,
                 },
                 goto=END,
             )
-        actions = [*actions, _action("private_note")]
+        actions = actions + [_action("private_note")]
 
     try:
         await services.slack.log_execution(state.summary)
@@ -377,13 +361,13 @@ async def finalize(state: State, runtime: Runtime[Context]) -> Command:
                 "outcome": "failed",
                 "outcome_reason": "unknown_error",
                 "summary": "Failed to send Slack execution summary.",
-                "actions": [*actions, _action("slack_summary", "failed")],
+                "actions": actions + [_action("slack_summary", "failed")],
                 "terminal": True,
             },
             goto=END,
         )
 
-    return Command(update={"actions": [*actions, _action("slack_summary")]}, goto=END)
+    return Command(update={"actions": actions + [_action("slack_summary")]}, goto=END)
 
 
 def build_graph(checkpointer: Any | None = None):

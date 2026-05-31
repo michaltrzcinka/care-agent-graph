@@ -32,9 +32,7 @@ def _build_default_services() -> Services:
 
 
 def build_services(runtime: Runtime[Context]) -> Services:
-    context = runtime.context or Context()
-
-    if context.services is not None:
-        return context.services
+    if runtime.context.services is not None:
+        return runtime.context.services
 
     return _build_default_services()

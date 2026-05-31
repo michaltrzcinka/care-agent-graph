@@ -41,7 +41,4 @@ class RefundClassifier(ClassifierService):
             ]
         )
 
-        if isinstance(result, Classification):
-            return result
-
         return Classification.model_validate(result)

@@ -1,9 +1,8 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
-from typing_extensions import TypedDict
 
 
 class Ticket(BaseModel):
@@ -18,7 +17,6 @@ class CamelModel(BaseModel):
 
 
 class User(CamelModel):
-
     id: str
     uuid: str
     first_name: str = Field(alias="firstname")
@@ -102,5 +100,69 @@ class Entitlement(BaseModel):
     credits_used: int
 
 
-class Context(TypedDict):
-    execution_mode: Literal["review", "automation"]
+Intent = Literal["refund", "other", "unknown"]
+Outcome = Literal["skipped", "routed_to_human", "handled", "failed"]
+OutcomeReason = Literal[
+    "no_user_data_in_ticket",
+    "no_user_data_in_admin",
+    "not_a_refund",
+    "outside_policy",
+    "partial_refund",
+    "review_mode",
+    "low_confidence",
+    "ambiguous_request",
+    "refunded",
+    "no_action_needed",
+    "helpscout_api_error",
+    "admin_api_error",
+    "llm_error",
+    "unknown_error",
+]
+ActionType = Literal[
+    "refund",
+    "helpscout_reply",
+    "helpscout_close",
+    "private_note",
+    "slack_summary",
+]
+ActionStatus = Literal["completed", "failed"]
+
+
+class Action(BaseModel):
+    type: ActionType
+    status: ActionStatus
+    external_id: str | None = None
+
+
+class Classification(BaseModel):
+    intent: Literal["refund", "other"]
+    confidence: float
+
+
+class Context(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    execution_mode: Literal["review", "automation"] = "automation"
+    services: Any | None = None
+
+
+class Input(BaseModel):
+    helpscout_conversation_id: str
+
+
+class Output(BaseModel):
+    intent: Intent = "unknown"
+    outcome: Outcome | None = None
+    outcome_reason: OutcomeReason | None = None
+    summary: str = ""
+    actions: list[Action] = Field(default_factory=list)
+
+
+class State(Input, Output):
+    ticket: Ticket | None = None
+    user_id: int | None = None
+    user: User | None = None
+    confidence: float | None = None
+    terminal: bool = False
+    needs_review: bool = False
+    approval_requested: bool = False

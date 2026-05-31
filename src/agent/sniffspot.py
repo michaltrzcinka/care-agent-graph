@@ -72,6 +72,10 @@ class Sniffspot:
     async def get_user(self, user_id: str) -> User | None:
         return await asyncio.to_thread(self._get_user, user_id)
 
+    async def issue_refund(self, user: User, ticket_id: str) -> str | None:
+        # TODO: Replace with the Sniffspot admin refund endpoint.
+        return None
+
     def _get_user(self, user_id: str) -> User | None:
         auth_headers = self._auth_headers()
 

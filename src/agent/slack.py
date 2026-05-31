@@ -1,6 +1,5 @@
 import os
 
-from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_client import AsyncWebClient
 
 
@@ -20,16 +19,8 @@ class Slack:
     async def log_execution(self, body: str) -> None:
         await self._send_message(self.log_channel, body)
 
-    async def _send_message(self, channel: str | None, body: str) -> None:
-        if not channel:
-            raise SlackError("Slack channel is required.")
-
-        try:
-            response = await self._client.chat_postMessage(channel=channel, text=body)
-        except SlackApiError as error:
-            raise SlackError(
-                f"Slack API error for channel {channel}: {error.response['error']}"
-            ) from error
+    async def _send_message(self, channel: str, body: str) -> None:
+        response = await self._client.chat_postMessage(channel=channel, text=body)
 
         if not response.get("ok"):
             raise SlackError(f"Slack API returned an error: {response}")

@@ -15,12 +15,7 @@ You can extend this graph to orchestrate more complex agentic workflows that can
 
 ## Getting Started
 
-1. Install dependencies, along with the [LangGraph CLI](https://langchain-ai.github.io/langgraph/concepts/langgraph_cli/), which will be used to run the server.
-
-```bash
-cd path/to/your/app
-pip install -e . "langgraph-cli[inmem]"
-```
+1. Install dependencies using uv.
 
 2. (Optional) Customize the code and project as needed. Create a `.env` file if you need to use secrets.
 

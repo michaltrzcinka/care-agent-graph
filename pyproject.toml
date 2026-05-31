@@ -1,24 +1,24 @@
 [project]
-name = "agent"
+name = "care-agent-graph"
 version = "0.0.1"
-description = "Starter template for making a new agent LangGraph."
+description = "LangGraph graphs for Sniffspot Care Agent."
 authors = [
-    { name = "William Fu-Hinthorn", email = "13333726+hinthornw@users.noreply.github.com" },
+    { name = "Michal Trzcinka", email = "michal@sniffspot.com" },
 ]
 readme = "README.md"
-license = { text = "MIT" }
 requires-python = ">=3.10"
 dependencies = [
-    "langgraph>=1.0.0",
+    "langgraph>=1.2.2",
     "python-dotenv>=1.0.1",
+    "python-helpscout-v2>=2.0.0",
 ]
 
 
 [project.optional-dependencies]
-dev = ["mypy>=1.11.1", "ruff>=0.6.1"]
+dev = ["mypy>=2.1.0", "ruff>=0.15.15"]
 
 [build-system]
-requires = ["setuptools>=73.0.0", "wheel"]
+requires = ["setuptools>=82.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
@@ -36,7 +36,6 @@ lint.select = [
     "E",    # pycodestyle
     "F",    # pyflakes
     "I",    # isort
-    "D",    # pydocstyle
     "D401", # First line should be in imperative mood
     "T201",
     "UP",
@@ -47,7 +46,6 @@ lint.ignore = [
     # We actually do want to import from typing_extensions
     "UP035",
     # Relax the convention by _not_ requiring documentation for every function parameter.
-    "D417",
     "E501",
 ]
 [tool.ruff.lint.per-file-ignores]
@@ -57,9 +55,9 @@ convention = "google"
 
 [dependency-groups]
 dev = [
-    "anyio>=4.7.0",
-    "langgraph-cli[inmem]>=0.4.14",
-    "mypy>=1.13.0",
-    "pytest>=8.3.5",
-    "ruff>=0.8.2",
+    "anyio>=4.13.0",
+    "langgraph-cli[inmem]>=0.4.27",
+    "mypy>=2.1.0",
+    "pytest>=9.0.3",
+    "ruff>=0.15.15",
 ]

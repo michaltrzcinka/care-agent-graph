@@ -5,8 +5,9 @@ import pytest
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 
-from agent.graph import Services, build_graph
+from agent.graph import build_graph
 from agent.models import Classification, Context
+from agent.services import Services
 from tests.fakes import make_services, make_ticket, make_user
 
 pytestmark = pytest.mark.anyio

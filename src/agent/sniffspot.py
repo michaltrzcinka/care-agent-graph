@@ -4,7 +4,7 @@ import os
 import pprint
 import urllib.parse
 import urllib.request
-from typing import Any
+from typing import Any, Protocol
 
 from agent.models import User
 
@@ -56,7 +56,13 @@ class SniffspotError(RuntimeError):
     pass
 
 
-class Sniffspot:
+class SniffspotService(Protocol):
+    async def get_user(self, user_id: str) -> User | None: ...
+
+    async def issue_refund(self, user: User, ticket_id: str) -> str | None: ...
+
+
+class Sniffspot(SniffspotService):
     def __init__(
         self,
         admin_email: str | None = None,

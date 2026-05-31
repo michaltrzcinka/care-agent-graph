@@ -1,11 +1,22 @@
 import os
+from typing import Protocol
 
 from helpscout import HelpScout as HelpScoutClient
 
 from agent.models import Ticket
 
 
-class HelpScout:
+class HelpDeskService(Protocol):
+    def get_ticket(self, ticket_id: str) -> Ticket: ...
+
+    def leave_private_note(self, ticket_id: str, message: str) -> None: ...
+
+    def reply_to_ticket(
+        self, ticket_id: str, message: str, close: bool = False
+    ) -> None: ...
+
+
+class HelpScout(HelpDeskService):
     def __init__(self):
         self._client = HelpScoutClient(
             app_id=os.getenv("HELP_SCOUT_APP_ID"),

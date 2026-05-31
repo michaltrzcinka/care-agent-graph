@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from agent.graph import Services
 from agent.models import Classification, Ticket, User
+from agent.services import Services
 
 
 @dataclass

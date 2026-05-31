@@ -1,11 +1,16 @@
 import os
+from typing import Protocol
 
 from agent.models import Classification, Ticket, User
 
 DEFAULT_MODEL = "claude-3-5-haiku-20241022"
 
 
-class RefundClassifier:
+class ClassifierService(Protocol):
+    async def classify(self, ticket: Ticket, user: User) -> Classification: ...
+
+
+class RefundClassifier(ClassifierService):
     def __init__(self, model: str | None = None):
         from langchain_anthropic import ChatAnthropic
 

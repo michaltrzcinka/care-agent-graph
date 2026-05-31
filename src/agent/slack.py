@@ -1,4 +1,5 @@
 import os
+from typing import Protocol
 
 from slack_sdk.web.async_client import AsyncWebClient
 
@@ -7,7 +8,13 @@ class SlackError(RuntimeError):
     pass
 
 
-class Slack:
+class SlackService(Protocol):
+    async def ask_for_approval(self, body: str) -> None: ...
+
+    async def log_execution(self, body: str) -> None: ...
+
+
+class Slack(SlackService):
     def __init__(self):
         self.approvals_channel = os.getenv("SLACK_APPROVALS_CHANNEL")
         self.log_channel = os.getenv("SLACK_LOG_CHANNEL")

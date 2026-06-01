@@ -124,9 +124,6 @@ CONFIDENCE_THRESHOLD = 0.80
 
 
 def decide(state: State, runtime: Runtime[Context]) -> Command:
-    if state.ticket is None or state.user is None:
-        return Command(update={}, goto="finalize")
-
     if state.intent == "other":
         return _terminal(
             intent="other",

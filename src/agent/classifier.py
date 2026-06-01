@@ -1,9 +1,10 @@
-import os
 from typing import Protocol
+
+from langsmith import Client
 
 from agent.models import Classification, Ticket, User
 
-DEFAULT_MODEL = "claude-3-5-haiku-20241022"
+DEFAULT_PROMPT_NAME = "classify_intent"
 
 
 class ClassifierService(Protocol):
@@ -11,34 +12,18 @@ class ClassifierService(Protocol):
 
 
 class RefundClassifier(ClassifierService):
-    def __init__(self, model: str | None = None):
-        from langchain_anthropic import ChatAnthropic
-
-        self._model = ChatAnthropic(
-            model=model or os.getenv("ANTHROPIC_MODEL", DEFAULT_MODEL),
-            temperature=0,
-        ).with_structured_output(Classification)
-
-    async def classify(self, ticket: Ticket, user: User) -> Classification:
-        result = await self._model.ainvoke(
-            [
-                (
-                    "system",
-                    "Classify the support ticket intent. Return refund only when "
-                    "the customer is asking for a refund. Otherwise return other.",
-                ),
-                (
-                    "human",
-                    "\n".join(
-                        [
-                            f"Ticket subject: {ticket.subject}",
-                            f"Ticket body: {ticket.description}",
-                            f"Customer email: {ticket.email}",
-                            f"Sniffspot user id: {user.id}",
-                        ]
-                    ),
-                ),
-            ]
+    def __init__(self):
+        self._prompt = (
+            Client()
+            .pull_prompt(DEFAULT_PROMPT_NAME, include_model=True)
+            .with_structured_output(Classification)
         )
 
-        return Classification.model_validate(result)
+    async def classify(self, ticket: Ticket, user: User) -> Classification:
+        return await self._prompt.ainvoke(
+            {
+                "ticket_subject": ticket.subject,
+                "ticket_body": ticket.description,
+                "user_email": ticket.email,
+            }
+        )

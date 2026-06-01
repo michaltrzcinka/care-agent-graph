@@ -137,7 +137,7 @@ def decide(state: State, runtime: Runtime[Context]) -> Command:
             intent="refund",
             outcome="routed_to_human",
             outcome_reason="low_confidence",
-            summary=f"Routed ticket {state.ticket.id}: refund confidence was below {CONFIDENCE_THRESHOLD:.2f}.",
+            summary=f"Routed ticket {state.ticket.id}: refund confidence {state.confidence:.2f} was below {CONFIDENCE_THRESHOLD:.2f}.",
         )
 
     if _is_outside_policy(state.user):
@@ -169,9 +169,6 @@ def decide(state: State, runtime: Runtime[Context]) -> Command:
 
 
 async def notify_for_review(state: State, runtime: Runtime[Context]) -> Command:
-    if state.ticket is None or state.user is None:
-        return Command(update={}, goto="finalize")
-
     await build_services(runtime).slack.ask_for_approval(state.summary)
     return Command(update={"approval_requested": True}, goto="wait_for_approval")
 

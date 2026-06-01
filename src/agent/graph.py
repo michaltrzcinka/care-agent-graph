@@ -20,9 +20,6 @@ from agent.models import (
 )
 from agent.services import build_services
 
-CONFIDENCE_THRESHOLD = 0.80
-REFUND_POLICY_WINDOW = timedelta(days=7)
-
 
 def _terminal(
     intent: str,
@@ -44,18 +41,9 @@ def _terminal(
 
 
 async def fetch_ticket(state: State, runtime: Runtime[Context]) -> Command:
-    try:
-        ticket = build_services(runtime).helpdesk.get_ticket(
-            state.helpscout_conversation_id
-        )
-    except Exception:
-        return _terminal(
-            intent="unknown",
-            outcome="failed",
-            outcome_reason="helpscout_api_error",
-            summary="Failed to fetch HelpScout ticket.",
-        )
-
+    ticket = build_services(runtime).helpdesk.get_ticket(
+        state.helpscout_conversation_id
+    )
     return Command(update={"ticket": ticket}, goto="extract_user_id")
 
 
@@ -80,16 +68,7 @@ async def fetch_user(state: State, runtime: Runtime[Context]) -> Command:
     if state.user_id is None:
         return Command(update={}, goto="finalize")
 
-    try:
-        user = await build_services(runtime).sniffspot.get_user(str(state.user_id))
-    except Exception:
-        return _terminal(
-            intent="unknown",
-            outcome="failed",
-            outcome_reason="admin_api_error",
-            summary=f"Failed to fetch Sniffspot user {state.user_id}.",
-        )
-
+    user = await build_services(runtime).sniffspot.get_user(str(state.user_id))
     if user is None:
         return _terminal(
             intent="unknown",
@@ -105,18 +84,9 @@ async def classify(state: State, runtime: Runtime[Context]) -> Command:
     if state.ticket is None or state.user is None:
         return Command(update={}, goto="finalize")
 
-    try:
-        classification = await build_services(runtime).classifier.classify(
-            state.ticket, state.user
-        )
-    except Exception:
-        return _terminal(
-            intent="unknown",
-            outcome="failed",
-            outcome_reason="llm_error",
-            summary=f"Failed to classify ticket {state.ticket.id}.",
-        )
-
+    classification = await build_services(runtime).classifier.classify(
+        state.ticket, state.user
+    )
     return Command(
         update={
             "intent": classification.intent,
@@ -137,6 +107,9 @@ def _latest_subscription(user: User) -> Subscription | None:
     return max(user.subscriptions, key=lambda subscription: subscription.created_at)
 
 
+REFUND_POLICY_WINDOW = timedelta(days=7)
+
+
 def _is_outside_policy(user: User, now: datetime | None = None) -> bool:
     subscription = _latest_subscription(user)
     if subscription is None:
@@ -147,6 +120,9 @@ def _is_outside_policy(user: User, now: datetime | None = None) -> bool:
         created_at = created_at.replace(tzinfo=UTC)
 
     return (now or datetime.now(UTC)) - created_at > REFUND_POLICY_WINDOW
+
+
+CONFIDENCE_THRESHOLD = 0.80
 
 
 def decide(state: State, runtime: Runtime[Context]) -> Command:
@@ -201,16 +177,7 @@ async def notify_for_review(state: State, runtime: Runtime[Context]) -> Command:
     if state.ticket is None or state.user is None:
         return Command(update={}, goto="finalize")
 
-    try:
-        await build_services(runtime).slack.ask_for_approval(state.summary)
-    except Exception:
-        return _terminal(
-            intent="refund",
-            outcome="failed",
-            outcome_reason="unknown_error",
-            summary=f"Failed to send approval request for ticket {state.ticket.id}.",
-        )
-
+    await build_services(runtime).slack.ask_for_approval(state.summary)
     return Command(update={"approval_requested": True}, goto="wait_for_approval")
 
 
@@ -242,39 +209,16 @@ async def execute_refund(state: State, runtime: Runtime[Context]) -> Command:
     services = build_services(runtime)
     actions = state.actions
 
-    try:
-        refund_id = await services.sniffspot.issue_refund(state.user, state.ticket.id)
-    except Exception:
-        return _terminal(
-            intent="refund",
-            outcome="failed",
-            outcome_reason="admin_api_error",
-            summary=f"Failed to issue refund for ticket {state.ticket.id}.",
-        )
+    refund_id = await services.sniffspot.issue_refund(state.user, state.ticket.id)
     actions = actions + [
         Action(type="refund", status="completed", external_id=refund_id)
     ]
 
-    try:
-        services.helpdesk.reply_to_ticket(
-            state.ticket.id,
-            "Your refund has been processed.",
-            close=True,
-        )
-    except Exception:
-        return Command(
-            update={
-                "intent": "refund",
-                "outcome": "failed",
-                "outcome_reason": "helpscout_api_error",
-                "summary": f"Failed to record HelpScout reply/close for ticket {state.ticket.id}.",
-                "terminal": True,
-                "needs_review": False,
-                "actions": actions,
-            },
-            goto="finalize",
-        )
-
+    services.helpdesk.reply_to_ticket(
+        state.ticket.id,
+        "Your refund has been processed.",
+        close=True,
+    )
     actions = actions + [
         Action(type="helpscout_reply", status="completed"),
         Action(type="helpscout_close", status="completed"),
@@ -297,38 +241,11 @@ async def finalize(state: State, runtime: Runtime[Context]) -> Command:
     services = build_services(runtime)
     actions = state.actions
 
-    if state.ticket is not None and state.outcome_reason != "helpscout_api_error":
-        try:
-            services.helpdesk.leave_private_note(state.ticket.id, state.summary)
-        except Exception:
-            return Command(
-                update={
-                    "outcome": "failed",
-                    "outcome_reason": "helpscout_api_error",
-                    "summary": f"Failed to leave private note for ticket {state.ticket.id}.",
-                    "actions": actions
-                    + [Action(type="private_note", status="failed")],
-                    "terminal": True,
-                },
-                goto=END,
-            )
+    if state.ticket is not None:
+        services.helpdesk.leave_private_note(state.ticket.id, state.summary)
         actions = actions + [Action(type="private_note", status="completed")]
 
-    try:
-        await services.slack.log_execution(state.summary)
-    except Exception:
-        return Command(
-            update={
-                "outcome": "failed",
-                "outcome_reason": "unknown_error",
-                "summary": "Failed to send Slack execution summary.",
-                "actions": actions
-                + [Action(type="slack_summary", status="failed")],
-                "terminal": True,
-            },
-            goto=END,
-        )
-
+    await services.slack.log_execution(state.summary)
     return Command(
         update={
             "actions": actions + [Action(type="slack_summary", status="completed")]

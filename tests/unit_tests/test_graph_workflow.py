@@ -146,44 +146,36 @@ async def test_review_mode_interrupts_and_resumes_with_approval() -> None:
     assert services.sniffspot.refunds == [("123", "456")]
 
 
-async def test_classifier_error_fails_as_llm_error() -> None:
+async def test_classifier_error_propagates() -> None:
     services = make_services(user=make_user(), classifier_error=RuntimeError("boom"))
 
-    result = await invoke_graph(services)
-
-    assert result["outcome"] == "failed"
-    assert result["outcome_reason"] == "llm_error"
+    with pytest.raises(RuntimeError, match="boom"):
+        await invoke_graph(services)
 
 
-async def test_helpscout_read_error_fails_as_helpscout_api_error() -> None:
+async def test_helpscout_read_error_propagates() -> None:
     services = make_services(helpscout_error=RuntimeError("boom"))
 
-    result = await invoke_graph(services)
-
-    assert result["outcome"] == "failed"
-    assert result["outcome_reason"] == "helpscout_api_error"
+    with pytest.raises(RuntimeError, match="boom"):
+        await invoke_graph(services)
 
 
-async def test_sniffspot_error_fails_as_admin_api_error() -> None:
+async def test_sniffspot_error_propagates() -> None:
     services = make_services(
         user=None,
         sniffspot_error=RuntimeError("boom"),
     )
 
-    result = await invoke_graph(services)
-
-    assert result["outcome"] == "failed"
-    assert result["outcome_reason"] == "admin_api_error"
+    with pytest.raises(RuntimeError, match="boom"):
+        await invoke_graph(services)
 
 
-async def test_slack_summary_error_fails_as_unknown_error() -> None:
+async def test_slack_summary_error_propagates() -> None:
     services = make_services(
         user=make_user(),
         classification=Classification(intent="other", confidence=0.99),
         slack_summary_error=RuntimeError("boom"),
     )
 
-    result = await invoke_graph(services)
-
-    assert result["outcome"] == "failed"
-    assert result["outcome_reason"] == "unknown_error"
+    with pytest.raises(RuntimeError, match="boom"):
+        await invoke_graph(services)

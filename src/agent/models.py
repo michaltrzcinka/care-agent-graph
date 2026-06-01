@@ -1,9 +1,11 @@
-from datetime import datetime
 import operator
+from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+
+ExecutionMode = Literal["review", "automation"]
 
 
 class Ticket(BaseModel):
@@ -139,7 +141,8 @@ class Classification(BaseModel):
 class Context(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    execution_mode: Literal["review", "automation"] = "automation"
+    execution_mode: ExecutionMode = "automation"
+    dry_run: bool = False
     services: Any | None = None
 
 

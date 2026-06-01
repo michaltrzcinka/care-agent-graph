@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import pprint
+import sys
 import urllib.parse
 import urllib.request
 from typing import Any, Protocol
@@ -149,9 +150,17 @@ class Sniffspot(SniffspotService):
         return json.loads(body)
 
 
-if __name__ == "__main__":
-    import sys
+class DrySniffspot(Sniffspot):
+    async def issue_refund(self, user: User, ticket_id: str) -> str | None:
+        print(
+            "[dry-run] Sniffspot refund\n"
+            f"user_id: {user.id}\n"
+            f"ticket_id: {ticket_id}"
+        )
+        return None
 
+
+if __name__ == "__main__":
     sniffspot = Sniffspot()
     user = asyncio.run(sniffspot.get_user(sys.argv[1]))
     pprint.pprint(user.model_dump(mode="json"), indent=2)

@@ -31,8 +31,25 @@ def _build_default_services() -> Services:
     )
 
 
+def _build_dry_run_services() -> Services:
+    from agent.classifier import RefundClassifier
+    from agent.helpdesk import DryHelpScout
+    from agent.slack import DrySlack
+    from agent.sniffspot import DrySniffspot
+
+    return Services(
+        helpdesk=DryHelpScout(),
+        sniffspot=DrySniffspot(),
+        slack=DrySlack(),
+        classifier=RefundClassifier(),
+    )
+
+
 def build_services(runtime: Runtime[Context]) -> Services:
     if runtime.context.services is not None:
         return runtime.context.services
+
+    if runtime.context.dry_run:
+        return _build_dry_run_services()
 
     return _build_default_services()

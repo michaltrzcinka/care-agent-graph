@@ -60,6 +60,26 @@ class HelpScout(HelpDeskService):
         #     )
 
 
+class DryHelpScout(HelpScout):
+    def leave_private_note(self, ticket_id: str, message: str) -> None:
+        print(
+            "[dry-run] HelpScout private note\n"
+            f"ticket_id: {ticket_id}\n"
+            "close: False\n"
+            f"message:\n{message}"
+        )
+
+    def reply_to_ticket(
+        self, ticket_id: str, message: str, close: bool = False
+    ) -> None:
+        print(
+            "[dry-run] HelpScout reply\n"
+            f"ticket_id: {ticket_id}\n"
+            f"close: {close}\n"
+            f"message:\n{message}"
+        )
+
+
 if __name__ == "__main__":
     helpdesk = HelpScout()
     ticket = helpdesk.get_ticket("3338393447")

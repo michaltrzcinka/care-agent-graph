@@ -33,6 +33,22 @@ class Slack(SlackService):
             raise SlackError(f"Slack API returned an error: {response}")
 
 
+class DrySlack(Slack):
+    async def ask_for_approval(self, body: str) -> None:
+        print(
+            "[dry-run] Slack approval request\n"
+            f"channel: {self.approvals_channel}\n"
+            f"body:\n{body}"
+        )
+
+    async def log_execution(self, body: str) -> None:
+        print(
+            "[dry-run] Slack execution log\n"
+            f"channel: {self.log_channel}\n"
+            f"body:\n{body}"
+        )
+
+
 if __name__ == "__main__":
     import asyncio
 

@@ -50,6 +50,8 @@ lint.ignore = [
     "UP035",
     # Relax the convention by _not_ requiring documentation for every function parameter.
     "E501",
+    # This project uses print for manual local tools and dry-run output.
+    "T201",
 ]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D", "UP"]

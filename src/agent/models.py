@@ -106,6 +106,7 @@ class Entitlement(BaseModel):
 Intent = Literal["refund", "other", "unknown"]
 Outcome = Literal["skipped", "routed_to_human", "handled"]
 OutcomeReason = Literal[
+    "ticket_not_found",
     "no_user_data_in_ticket",
     "no_user_data_in_admin",
     "not_a_refund",

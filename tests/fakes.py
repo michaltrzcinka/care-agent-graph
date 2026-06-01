@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from agent.models import Classification, Ticket, User
 from agent.services import Services
 
+DEFAULT_TICKET = object()
+
 
 @dataclass
 class FakeHelpScout:
@@ -14,10 +16,9 @@ class FakeHelpScout:
     private_notes: list[tuple[str, str]] = field(default_factory=list)
     replies: list[tuple[str, str, bool]] = field(default_factory=list)
 
-    def get_ticket(self, ticket_id: str) -> Ticket:
+    def get_ticket(self, ticket_id: str) -> Ticket | None:
         if self.error:
             raise self.error
-        assert self.ticket is not None
         return self.ticket
 
     def leave_private_note(self, ticket_id: str, message: str) -> None:
@@ -138,7 +139,7 @@ def make_user(created_at: datetime | None = None) -> User:
 
 def make_services(
     *,
-    ticket: Ticket | None = None,
+    ticket: Ticket | None | object = DEFAULT_TICKET,
     user: User | None = None,
     classification: Classification | None = None,
     classifier_error: Exception | None = None,
@@ -148,7 +149,7 @@ def make_services(
 ) -> Services:
     return Services(
         helpdesk=FakeHelpScout(
-            ticket=ticket or make_ticket(),
+            ticket=make_ticket() if ticket is DEFAULT_TICKET else ticket,
             error=helpscout_error,
         ),
         sniffspot=FakeSniffspot(user=user, error=sniffspot_error),

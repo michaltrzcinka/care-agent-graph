@@ -45,6 +45,13 @@ async def fetch_ticket(state: State, runtime: Runtime[Context]) -> Command:
     ticket = build_services(runtime).helpdesk.get_ticket(
         state.helpscout_conversation_id
     )
+    if ticket is None:
+        return _terminal(
+            intent="unknown",
+            outcome="skipped",
+            outcome_reason="ticket_not_found",
+            summary=f"Skipped ticket {state.helpscout_conversation_id}: HelpScout conversation not found.",
+        )
 
     return Command(update={"ticket": ticket}, goto="extract_user_id")
 

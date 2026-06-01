@@ -39,6 +39,20 @@ async def test_missing_user_id_skips_with_note_and_slack() -> None:
     assert services.slack.summaries
 
 
+async def test_missing_helpscout_conversation_skips_without_note() -> None:
+    services = make_services(ticket=None)
+
+    result = await invoke_graph(services)
+
+    assert result["intent"] == "unknown"
+    assert result["outcome"] == "skipped"
+    assert result["outcome_reason"] == "ticket_not_found"
+    assert services.helpdesk.private_notes == []
+    assert services.slack.summaries == [
+        "Skipped ticket 456: HelpScout conversation not found."
+    ]
+
+
 async def test_missing_sniffspot_user_skips() -> None:
     services = make_services(user=None)
 

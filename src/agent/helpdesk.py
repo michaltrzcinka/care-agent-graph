@@ -2,12 +2,13 @@ import os
 from typing import Protocol
 
 from helpscout import HelpScout as HelpScoutClient
+from helpscout.exceptions import HelpScoutException
 
 from agent.models import Ticket
 
 
 class HelpDeskService(Protocol):
-    def get_ticket(self, ticket_id: str) -> Ticket: ...
+    def get_ticket(self, ticket_id: str) -> Ticket | None: ...
 
     def leave_private_note(self, ticket_id: str, message: str) -> None: ...
 
@@ -23,8 +24,14 @@ class HelpScout(HelpDeskService):
             app_secret=os.getenv("HELP_SCOUT_APP_SECRET"),
         )
 
-    def get_ticket(self, ticket_id: str) -> Ticket:
-        conversation = self._client.conversations.get(resource_id=ticket_id)
+    def get_ticket(self, ticket_id: str) -> Ticket | None:
+        try:
+            conversation = self._client.conversations.get(resource_id=ticket_id)
+        except HelpScoutException as error:
+            if error.args == ("",):
+                return None
+            raise
+
         threads = self._client.conversations[int(ticket_id)].threads.get()
         first_thread = threads[-1]
         description = first_thread.body

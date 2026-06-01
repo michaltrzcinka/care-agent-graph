@@ -162,3 +162,8 @@ class State(Input, Output):
     terminal: bool = False
     needs_review: bool = False
     approval_requested: bool = False
+
+
+class Approval(BaseModel):
+    approved: bool
+    reason: str | None = None

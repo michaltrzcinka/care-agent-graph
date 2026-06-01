@@ -10,6 +10,7 @@ from langgraph.types import Command, interrupt
 
 from agent.models import (
     Action,
+    Approval,
     Context,
     Input,
     OutcomeReason,
@@ -174,30 +175,29 @@ async def notify_for_review(state: State, runtime: Runtime[Context]) -> Command:
 
 
 def wait_for_approval(state: State) -> Command:
-    approval = interrupt(
-        {
-            "ticket_id": state.ticket.id if state.ticket else None,
-            "user_id": state.user.id if state.user else None,
-            "summary": state.summary,
-        }
+    approval = Approval.model_validate_json(
+        interrupt(
+            {
+                "ticket_id": state.ticket.id,
+                "user_id": state.user.id,
+                "summary": state.summary,
+            }
+        )
     )
 
-    approved = approval.get("approved", False)
+    approved = approval.approved
     if not approved:
         return _terminal(
             intent="refund",
             outcome="routed_to_human",
             outcome_reason="review_mode",
-            summary=f"Routed ticket {state.ticket.id if state.ticket else state.helpscout_conversation_id}: approval was not granted.",
+            summary=f"Routed ticket {state.ticket.id}: approval denied with reason: {approval.reason}.",
         )
 
     return Command(update={"needs_review": False}, goto="execute_refund")
 
 
 async def execute_refund(state: State, runtime: Runtime[Context]) -> Command:
-    if state.ticket is None or state.user is None:
-        return Command(update={}, goto="finalize")
-
     services = build_services(runtime)
     actions = state.actions
 

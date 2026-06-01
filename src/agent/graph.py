@@ -44,6 +44,7 @@ async def fetch_ticket(state: State, runtime: Runtime[Context]) -> Command:
     ticket = build_services(runtime).helpdesk.get_ticket(
         state.helpscout_conversation_id
     )
+
     return Command(update={"ticket": ticket}, goto="extract_user_id")
 
 
@@ -81,9 +82,6 @@ async def fetch_user(state: State, runtime: Runtime[Context]) -> Command:
 
 
 async def classify(state: State, runtime: Runtime[Context]) -> Command:
-    if state.ticket is None or state.user is None:
-        return Command(update={}, goto="finalize")
-
     classification = await build_services(runtime).classifier.classify(
         state.ticket, state.user
     )

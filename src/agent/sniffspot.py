@@ -3,9 +3,9 @@ import json
 import os
 import pprint
 import sys
-import urllib.parse
-import urllib.request
 from typing import Any, Protocol
+
+import aiohttp
 
 from agent.models import User
 
@@ -77,44 +77,43 @@ class Sniffspot(SniffspotService):
         self.admin_path = admin_path.strip("/")
 
     async def get_user(self, user_id: str) -> User | None:
-        return await asyncio.to_thread(self._get_user, user_id)
+        return await self._get_user(user_id)
 
     async def issue_refund(self, user: User, ticket_id: str) -> str | None:
         # TODO: Replace with the Sniffspot admin refund endpoint.
         return None
 
-    def _get_user(self, user_id: str) -> User | None:
+    async def _get_user(self, user_id: str) -> User | None:
         auth_headers = self._auth_headers()
 
-        memberships = self._request_json(
-            f"{self.base_url}/graphql",
-            auth_headers,
-            {
-                "query": QUERY,
-                "variables": {
-                    "id": user_id,
+        async with aiohttp.ClientSession(headers=auth_headers) as session:
+            memberships = await self._request_json(
+                session,
+                f"{self.base_url}/graphql",
+                {
+                    "query": QUERY,
+                    "variables": {
+                        "id": user_id,
+                    },
                 },
-            },
-        )
+            )
 
-        errors = memberships.get("errors")
-        if errors:
-            raise SniffspotError(f"GraphQL returned errors: {errors}")
+            errors = memberships.get("errors")
+            if errors:
+                raise SniffspotError(f"GraphQL returned errors: {errors}")
 
-        user = memberships.get("data", {}).get("user")
-        if user is None:
-            return None
+            user = memberships.get("data", {}).get("user")
+            if user is None:
+                return None
 
-        query = urllib.parse.urlencode(
-            {
-                "f[user][1][v]": user_id,
-                "f[user][1][o]": "is",
-            }
-        )
-        subscriptions = self._request_json(
-            f"{self.base_url}/{self.admin_path}/membership~subscription.json?{query}",
-            auth_headers,
-        )
+            subscriptions = await self._request_json(
+                session,
+                f"{self.base_url}/{self.admin_path}/membership~subscription.json",
+                params={
+                    "f[user][1][v]": user_id,
+                    "f[user][1][o]": "is",
+                },
+            )
 
         user["subscriptions"] = subscriptions
         return User.model_validate(user)
@@ -132,20 +131,21 @@ class Sniffspot(SniffspotService):
             "X-USER-TOKEN": self.admin_token,
         }
 
-    def _request_json(
+    async def _request_json(
         self,
+        session: aiohttp.ClientSession,
         url: str,
-        headers: dict[str, str],
         payload: dict[str, Any] | None = None,
+        params: dict[str, str] | None = None,
     ) -> Any:
-        data = None
-        if payload is not None:
-            data = json.dumps(payload).encode("utf-8")
-            headers = {"Content-Type": "application/json", **headers}
+        if payload is None:
+            response_context = session.get(url, params=params)
+        else:
+            response_context = session.post(url, json=payload, params=params)
 
-        request = urllib.request.Request(url, data=data, headers=headers)
-        with urllib.request.urlopen(request) as response:
-            body = response.read().decode("utf-8")
+        async with response_context as response:
+            response.raise_for_status()
+            body = await response.text()
 
         return json.loads(body)
 

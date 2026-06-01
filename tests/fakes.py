@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 
 from agent.models import Classification, Ticket, User
 from agent.services import Services
+from agent.sniffspot import RefundReason
 
 DEFAULT_TICKET = object()
 
@@ -38,16 +39,32 @@ class FakeHelpScout:
 class FakeSniffspot:
     user: User | None = None
     error: Exception | None = None
-    refunds: list[tuple[str, str]] = field(default_factory=list)
+    refunds: list[tuple[int, RefundReason, str | None, str | None, str | None]] = (
+        field(default_factory=list)
+    )
 
     async def get_user(self, user_id: str) -> User | None:
         if self.error:
             raise self.error
         return self.user
 
-    async def issue_refund(self, user: User, ticket_id: str) -> str | None:
-        self.refunds.append((user.id, ticket_id))
-        return None
+    async def issue_refund(
+        self,
+        subscription_id: int,
+        reason_predefined: RefundReason,
+        notes: str | None = None,
+        refund_due_override: str | None = None,
+        custom_reason: str | None = None,
+    ) -> None:
+        self.refunds.append(
+            (
+                subscription_id,
+                reason_predefined,
+                notes,
+                refund_due_override,
+                custom_reason,
+            )
+        )
 
 
 @dataclass

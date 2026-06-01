@@ -122,7 +122,15 @@ async def test_automation_happy_path_records_noop_actions() -> None:
         "private_note",
         "slack_summary",
     ]
-    assert services.sniffspot.refunds == [("123", "456")]
+    assert services.sniffspot.refunds == [
+        (
+            789,
+            "Other",
+            "HelpScout conversation 456: automated refund approved.",
+            None,
+            "Customer requested refund.",
+        )
+    ]
     assert services.helpdesk.replies == [
         ("456", "Your refund has been processed.", True)
     ]
@@ -157,7 +165,15 @@ async def test_review_mode_interrupts_and_resumes_with_approval() -> None:
 
     assert result["outcome"] == "handled"
     assert result["outcome_reason"] == "refunded"
-    assert services.sniffspot.refunds == [("123", "456")]
+    assert services.sniffspot.refunds == [
+        (
+            789,
+            "Other",
+            "HelpScout conversation 456: automated refund approved.",
+            None,
+            "Customer requested refund.",
+        )
+    ]
 
 
 async def test_classifier_error_propagates() -> None:

@@ -206,7 +206,21 @@ def wait_for_approval(state: State) -> Command:
 
 async def execute_refund(state: State, runtime: Runtime[Context]) -> Command:
     services = build_services(runtime)
-    refund_id = await services.sniffspot.issue_refund(state.user, state.ticket.id)
+    subscription = _latest_subscription(state.user)
+    if subscription is None:
+        return _terminal(
+            intent="refund",
+            outcome="routed_to_human",
+            outcome_reason="outside_policy",
+            summary=f"Routed ticket {state.ticket.id}: no subscription found to refund.",
+        )
+
+    await services.sniffspot.issue_refund(
+        subscription.id,
+        reason_predefined="Other",
+        notes=f"HelpScout conversation {state.ticket.id}: automated refund approved.",
+        custom_reason="Customer requested refund.",
+    )
 
     services.helpdesk.reply_to_ticket(
         state.ticket.id,
@@ -215,7 +229,7 @@ async def execute_refund(state: State, runtime: Runtime[Context]) -> Command:
     )
 
     actions = [
-        Action(type="refund", status="completed", external_id=refund_id),
+        Action(type="refund", status="completed"),
         Action(type="helpscout_reply", status="completed"),
         Action(type="helpscout_close", status="completed"),
     ]

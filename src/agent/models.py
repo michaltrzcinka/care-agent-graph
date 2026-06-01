@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Any, Literal
+import operator
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -151,7 +152,7 @@ class Output(BaseModel):
     outcome: Outcome | None = None
     outcome_reason: OutcomeReason | None = None
     summary: str = ""
-    actions: list[Action] = Field(default_factory=list)
+    actions: Annotated[list[Action], operator.add] = Field(default_factory=list)
 
 
 class State(Input, Output):

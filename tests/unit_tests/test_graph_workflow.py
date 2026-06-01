@@ -136,7 +136,7 @@ async def test_review_mode_interrupts_and_resumes_with_approval() -> None:
     assert services.sniffspot.refunds == []
 
     result = await graph.ainvoke(
-        Command(resume={"approved": True}),
+        Command(resume='{"approved": true}'),
         context=Context(execution_mode="review", services=services),
         config=config,
     )

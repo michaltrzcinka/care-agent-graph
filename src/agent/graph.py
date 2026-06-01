@@ -199,19 +199,16 @@ def wait_for_approval(state: State) -> Command:
 
 async def execute_refund(state: State, runtime: Runtime[Context]) -> Command:
     services = build_services(runtime)
-    actions = state.actions
-
     refund_id = await services.sniffspot.issue_refund(state.user, state.ticket.id)
-    actions = actions + [
-        Action(type="refund", status="completed", external_id=refund_id)
-    ]
 
     services.helpdesk.reply_to_ticket(
         state.ticket.id,
         "Your refund has been processed.",
         close=True,
     )
-    actions = actions + [
+
+    actions = [
+        Action(type="refund", status="completed", external_id=refund_id),
         Action(type="helpscout_reply", status="completed"),
         Action(type="helpscout_close", status="completed"),
     ]
@@ -231,7 +228,7 @@ async def execute_refund(state: State, runtime: Runtime[Context]) -> Command:
 
 async def finalize(state: State, runtime: Runtime[Context]) -> Command:
     services = build_services(runtime)
-    actions = state.actions
+    actions = []
 
     if state.ticket is not None:
         services.helpdesk.leave_private_note(state.ticket.id, state.summary)

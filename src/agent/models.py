@@ -132,7 +132,7 @@ class Action(BaseModel):
 
 class Classification(BaseModel):
     intent: Literal["refund", "other"]
-    confidence: float
+    confidence: float = Field(ge=0, le=1)
 
 
 class Context(BaseModel):

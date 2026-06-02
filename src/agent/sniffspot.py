@@ -121,9 +121,7 @@ class RefundDueParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         self._handle_input(tag, attrs)
 
-    def handle_startendtag(
-        self, tag: str, attrs: list[tuple[str, str | None]]
-    ) -> None:
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         self._handle_input(tag, attrs)
 
     def _handle_input(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -145,7 +143,7 @@ class SniffspotService(Protocol):
         notes: str | None = None,
         refund_due_override: str | None = None,
         custom_reason: str | None = None,
-    ) -> None: ...
+    ) -> str: ...
 
 
 class Sniffspot(SniffspotService):
@@ -171,7 +169,7 @@ class Sniffspot(SniffspotService):
         notes: str | None = None,
         refund_due_override: str | None = None,
         custom_reason: str | None = None,
-    ) -> None:
+    ) -> str:
         if reason_predefined == "Other" and not custom_reason:
             raise SniffspotError(
                 "custom_reason is required when reason_predefined is Other"
@@ -191,9 +189,7 @@ class Sniffspot(SniffspotService):
                     response=get_response,
                 )
 
-            rails_admin_prefill_refund_due = self._scrape_refund_due(
-                get_response.body
-            )
+            rails_admin_prefill_refund_due = self._scrape_refund_due(get_response.body)
             if not rails_admin_prefill_refund_due:
                 raise SniffspotError(
                     "could not scrape cancel[refund_due] from Rails Admin cancel page",
@@ -228,7 +224,7 @@ class Sniffspot(SniffspotService):
             )
 
         if post_response.status == 302:
-            return
+            return refund_due
 
         if post_response.status == 200:
             raise SniffspotError(

@@ -215,7 +215,7 @@ async def execute_refund(state: State, runtime: Runtime[Context]) -> Command:
             summary=f"Routed ticket {state.ticket.id}: no subscription found to refund.",
         )
 
-    await services.sniffspot.issue_refund(
+    refund_amount = await services.sniffspot.issue_refund(
         subscription.id,
         reason_predefined="Other",
         notes=f"HelpScout conversation {state.ticket.id}: automated refund approved.",
@@ -229,9 +229,9 @@ async def execute_refund(state: State, runtime: Runtime[Context]) -> Command:
     )
 
     actions = [
-        Action(type="refund", status="completed"),
-        Action(type="helpscout_reply", status="completed"),
-        Action(type="helpscout_close", status="completed"),
+        Action(type="refund", extra={"refund_amount": refund_amount}),
+        Action(type="helpscout_reply"),
+        Action(type="helpscout_close"),
     ]
 
     return Command(
@@ -253,12 +253,12 @@ async def finalize(state: State, runtime: Runtime[Context]) -> Command:
 
     if state.ticket is not None:
         services.helpdesk.leave_private_note(state.ticket.id, state.summary)
-        actions = actions + [Action(type="private_note", status="completed")]
+        actions = actions + [Action(type="private_note")]
 
     await services.slack.log_execution(state.summary)
     return Command(
         update={
-            "actions": actions + [Action(type="slack_summary", status="completed")]
+            "actions": actions + [Action(type="slack_summary")]
         },
         goto=END,
     )

@@ -125,13 +125,12 @@ ActionType = Literal[
     "private_note",
     "slack_summary",
 ]
-ActionStatus = Literal["completed", "failed"]
 
 
 class Action(BaseModel):
     type: ActionType
-    status: ActionStatus
     external_id: str | None = None
+    extra: dict[str, Any] | None = None
 
 
 class Classification(BaseModel):
